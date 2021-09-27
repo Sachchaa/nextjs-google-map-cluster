@@ -107,32 +107,11 @@ const locations = [
 ];
 
 const Home: NextPage = () => {
-  // Create an array of alphabetical characters used to label the markers.
-  const labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-  // Add some markers to the map.
-  // Note: The code uses the JavaScript Array.prototype.map() method to
-  // create an array of markers based on a given "locations" array.
-  // The map() method here has nothing to do with the Google Maps API.
-
-  /*
-  const markers = locations.map((location, i) => {
-    return new google.maps.Marker({
-      position: location,
-      label: labels[i % labels.length],
-    });
-  });
-
-  const markerCluster = new MarkerClusterer(map, markers, {
-    imagePath: "../images/m1.png",
-  });
-
-  */
-
   //map setup
-  const mapRef = useRef();
+  const mapRef = useRef<any>();
   const [zoom, setZoom] = useState(4);
   const [bounds, setBounds] = useState<any>([]);
+  const [expansionZoom, setExpansionZoom] = useState<number>(4);
 
   //load locations
   interface MarkerProps {
@@ -157,12 +136,12 @@ const Home: NextPage = () => {
     })
   );
 
-  //get the cluster
-  const markerClusters = useSupercluster({
+  //get clusters
+  const { clusters, supercluster } = useSupercluster({
     points,
     bounds,
     zoom,
-    options: { radius: 75, maxZoom: 20 },
+    options: { radius: 75, maxZoom: 30 },
   });
 
   return (
@@ -194,14 +173,14 @@ const Home: NextPage = () => {
           ]);
         }}
       >
-        {console.log("clusters", markerClusters.clusters)}
-        {markerClusters.clusters.map((cluster) => {
+        {console.log("clusters", clusters)}
+        {console.log("mapRef", mapRef.current)}
+        {clusters.map((cluster: any) => {
           const [lng, lat] = cluster.geometry.coordinates;
-          // const { cluster: isCluster, point_count: pointCount } =
-          //   cluster.properties?.cluster;
-          //const { point_count: pointCount } = cluster.properties?.point_count;
+          const { cluster: isCluster, point_count: pointCount } =
+            cluster.properties;
 
-          if (cluster.properties?.cluster) {
+          if (isCluster && supercluster) {
             return (
               <Marker key={cluster.id} lat={lat} lng={lng}>
                 <div
@@ -213,9 +192,23 @@ const Home: NextPage = () => {
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
+                    width: `${20 + (pointCount / points.length) * 20}px`,
+                    height: `${20 + (pointCount / points.length) * 20}px`,
+                  }}
+                  onClick={() => {
+                    setExpansionZoom(
+                      Math.min(
+                        supercluster.getClusterExpansionZoom(
+                          cluster.id as number
+                        ),
+                        20
+                      )
+                    );
+                    mapRef.current.setZoom(expansionZoom),
+                      mapRef.current.panTo({ lat: lat, lng: lng });
                   }}
                 >
-                  {cluster.properties?.point_count}
+                  {pointCount}
                 </div>
               </Marker>
             );
@@ -234,18 +227,6 @@ const Home: NextPage = () => {
             </Marker>
           );
         })}
-        {/* {locations.map((location, index) => (
-          <Marker lat={location.lat} lng={location.lng} key={index}>
-            <button
-              style={{
-                background: "none",
-                border: "none",
-              }}
-            >
-              <FaMapMarkerAlt />
-            </button>
-          </Marker>
-        ))} */}
       </GoogleMapReact>
     </div>
   );
